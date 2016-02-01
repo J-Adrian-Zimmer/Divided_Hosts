@@ -166,12 +166,6 @@ dgit.commit(
 
 
 
-### push to NFS ###
-
-dgit.push('nfs','master')
-
-
-
 ### update last_deployment.py ###
 
 with open(
@@ -181,3 +175,10 @@ with open(
              ','.join( cur_deployment ) +
              ']'
            )
+### push to NFS ###
+
+os.system('git push nfs master')
+   # using system so password verification will work
+   # for ssh key verification try
+   # dgit.push('nfs','master')
+
