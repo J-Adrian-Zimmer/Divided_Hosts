@@ -4,23 +4,30 @@
 <head>
 <script  language="javascript" type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script>
+$id = function(id) {
+          return $('#'+id)
+      }
+
 $(function(){
    
    function relo() {
       $.post( 
-        '**HTTP_DOMAIN**/post/' + $('#'+what).val, 
+        '**HTTP_DOMAIN**/post/' + $id(what).val, 
         JSON.stringify(
            { command: "no matter",
-             payload: $('#'+message).val
+             payload: $id(message).val
            } 
         ),
-        function(html) {
-           $('body').html(html)
-        }
+        function(jsonstr) {
+           $id('response_area').html(
+                JSON.parse(jsonstr).payload
+           )
+        },
+        'text'
       )
    }
 
-   $('#pst').click( relo ) 
+   $('#req').click( relo ) 
 })
 </script>
 </head><body>
@@ -35,10 +42,10 @@ Do What? (env|echo):&nbsp;&npsp;
 Message:&nbsp;&nbsp;
 <input type='text' id='message'/>
 </p><p style='width:800px;' >
-<button id='pst'>Request</button>
+<button id='req'>Request</button>
 </p>
-<p style='width:600px;' >
-<img src='media/teapot.jpg' width="494px">
+<p id='response_area' style='width:600px;' >
+&nbsp;
 </p></center>
 </body></html>
 
