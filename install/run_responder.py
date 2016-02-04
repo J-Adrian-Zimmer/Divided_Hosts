@@ -5,10 +5,11 @@ import os.path as op
 
 env = os.environ
 
-exec_path = op.join( 
-              '/home/public/post',
-              env['PATH_INFO'] + '.py'
-            )
+cmd = env['THE_POST_COMMAND'][1:]
+exec_path = op.join( '/home/public/post%s.py' % cmd )
+
+if not op.exists(exec_path):
+   error( "No %s command can be found" %  cmd )
 
 def get_request():
   return json.dumps( sys.stdin.read() )
@@ -30,14 +31,12 @@ def error(msg):
   send_response( "error", "ERROR: " + msg )
    
 
-if not op.exists(exec_path):
-   error( exec_path + " does not exist." )
 
 try:
    with open( exec_path ) as fi:  exec( fi.read() )
    # should define respond()
 except:
-   error("Cannot process " + env['PATH_INFO'][1:] )
+   error("Cannot process " + cmd )
 
 try:
   conlen = env['content-length']

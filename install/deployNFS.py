@@ -5,12 +5,9 @@ with open('deployCommon.py') as fi:
 
 ### action ###
 
-for d in ['get','post','py']:
+for d in ['get','post','support']:
    adjustDeploymentDir(
-      source_dir = source_dir,
-      target_dir = deployment_dir,
-      subdir = 'get',
-      files = getFiles(source_dir, 'get'),
+      subdir = d,
       copy = filterfile if d=='get' else copyfile 
    )
 
@@ -20,14 +17,14 @@ for d in ['get','post','py']:
 dgit.add('-A','.')
 dgit.commit(
       '-m',
-      'Deploying\n\n   ' +
-         '\n   '.join(cur_deployment)
+      'Deploying from ' + source_dir
 )
 
 
 
 ### push to NFS ###
 
+os.chdir(deployment_dir)
 os.system('git push nfs master')
    # using system so password verification will work
    # for ssh key verification try

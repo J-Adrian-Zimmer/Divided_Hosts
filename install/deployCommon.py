@@ -1,9 +1,8 @@
-import os, sys, shutil
+import os, sys, shutil, json
 import os.path as op
 from git import Git
 
-
-### get source and target dirs and their repos ###
+### get source and development dirs and their repos ###
 
 source_dir = op.dirname(os.getcwd())
 os.chdir(source_dir)    ## LEAVING INSTALL FOR PARENT DIR
@@ -11,11 +10,11 @@ os.chdir(source_dir)    ## LEAVING INSTALL FOR PARENT DIR
 sgit = Git(source_dir)
 
 def abort(msg=None):
-   usage = """usage: deployNFS.py deployment_dir http_domain
+   usage = """usage: deploy{NFS|FH|FO}.py deployment_dir http_domain
    Where 
      1) deployNFS.py is in the install subdir 
         of a Divided_Hosts app. 
-     2) deployment_dir is has  been initialiized 
+     2) deployment_dir is has  been initialized 
         for NFS deployment.
      3) http_domain is the domain name for responder
         files including an http or https prefix"""
@@ -34,7 +33,7 @@ except:
 dgit = Git(deployment_dir)
 
 try:
-   http_domain = op.abspath(sys.argv[2])
+   http_domain = sys.argv[2]
    assert http_domain[:4]=="http"
 except:
    abort()
@@ -95,29 +94,59 @@ def removefile(f):
 
 def filterfile(f):
    import re
-   with open( op.join( source_dir, f) ) as fi:
+   with open( op.join(source_dir,f) ) as fi:
       txt = fi.read()
-   txt = re.sub(
-             r'**HTTP_DOMAIN**',
+   with open( op.join(deployment_dir,f), 'w' ) as fo:
+      fo.write(
+          re.sub(
+             r'http://localhost',
              http_domain,
              txt
-         )
-   with open( op.join( deployment_dir, f), 'w' ) as fo:
-        fo.write(txt)
+      )   )
+
+def adjustFiles(additions,old_additions,copy):
+   ''' Copies or deletes files.  The copy parameter allows for straight or filtered copying.
+   ''' 
+
+   #   (This adapted from a standard pattern for merging 
+   #   two sorted lists.)
+
+   i = j = 0
+   while i<len(additions) and j<len(old_additions):
+      n = additions[i]
+      t = old_additions[j]
+      if n<t:
+         copy(n)
+         i += 1
+      elif n>t:  # old file t is no longer in use
+         removefile(t)
+         j += 1
+      else:  # n==t
+         copy(n)
+         # skipping over t
+         i += 1; j += 1
+
+   while i<len(additions):
+      copy(additions[i])
+      i += 1
+
+   while j < len(old_additions):
+      removefile(old_additions[j])
+      j += 1
 
 
-def getFiles( source_dir, subdir ):
-   ''' Make a list of files by recursively searching subdir
+def getFiles( rootdir ):
+   ''' Make a list of files by recursively searching rootdir
        The file paths will assume (but do not contain) a base 
-       of op.join(source_dir,subdir).
+       of op.join(source_dir,rootdir).
        Some files excluded, see source code.
    '''
 
    old_cwd = os.getcwd()
-   os.chdir(source_dir)
+   os.chdir( op.join(source_dir, rootdir) )
 
    filelist = [
-      op.join(subdir,f) 
+      op.join(rootdir,dir,f) 
         for (dir,_, files) in os.walk('.')
            for f in files
               if ( f[0]!='.' and 
@@ -131,61 +160,36 @@ def getFiles( source_dir, subdir ):
    os.chdir(old_cwd)
    return filelist
 
-def adjustDeploymentDir(
-   source_dir,
-   target_dir,  # a.k.a. deployment dir
-   subdir,
-   files,
-   copy
-):
-   ''' Copy files from source_dir to target_dir
-       Delete old_files from target_dir if they are not in files
+def adjustDeploymentDir( subdir, copy ):
+   ''' Copy subdir's files from source_dir to deployment_dir.  Delete old_files from deployment_dir if they are not in source_dir.
    '''
 
-   old_file_name = op.join( 
-                      target_dir, 
-                      subdir,
-                      '_recently_deployed.py'
+   ### prepare ###
+
+   remembered_path = op.join( 
+                      deployment_dir, 
+                      'last_deployment.py'
                    )
+   try:
+      with open(remembered_path) as fi:
+           remembered = json.loads( fi.read() )
+   except:
+      abort( 
+        "last_deployment.py is not usable\n" +
+        "(It should be unstaged in the deployment dir.)"
+      )
+       
+   new_files = getFiles(subdir)
+   deployed_files = remembered['Divided_Hosts'][subdir]
+   
+   ### do ###
+   
+   adjustFiles(new_files, deployed_files,copy)
+    
+   ### record ###
 
-   def adjustFiles(additions,subtractions):
-      #   (This adapted from a standard pattern for merging 
-      #   two sorted lists.)
-
-      i = j = 0
-      while i<len(additions) and j<len(subtractions):
-         n = additions[i]
-         t = subtractions[j]
-         if n<t:
-            copyfile(n)
-            i += 1
-         elif n>t:
-            removefile(t)
-            j += 1
-         else:  # n==t
-            copyfile(n)
-            # skipping over t
-            i += 1; j += 1
-
-      while i<len(additions):
-         copyfile(additions[i])
-         i += 1
-
-      while j < len(subtractions):
-         removefile(subtractions[j])
-         j += 1
-
-      try:
-         with open(old_file_name) as fi:
-              old_files = eval( fi.read() )
-         assert type(old_files)==type([])
-      except:
-         abort( 
-           "last_deployment.py is not usable\n" +
-           "(It should be unstaged in the deployment dir.)"
-         ) 
-
-      with open(old_file_name,'w') as fo:
-         fo.write( '[' + ','.join(files) + ']' )
+   remembered['Divided_Hosts'][subdir] = new_files 
+   with open(remembered_path,'w') as fo:
+      fo.write( json.dumps(remembered) )
 
 

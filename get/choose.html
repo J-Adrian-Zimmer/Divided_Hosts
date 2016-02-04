@@ -4,22 +4,18 @@
 <head>
 <script  language="javascript" type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
 <script>
-$id = function(id) {
-          return $('#'+id)
-      }
-
 $(function(){
    
    function relo() {
       $.post( 
-        '**HTTP_DOMAIN**/post/' + $id(what).val, 
+        'http://localhost/' + $("#what").val(), 
         JSON.stringify(
            { command: "no matter",
-             payload: $id(message).val
+             payload: $("#message").val()
            } 
         ),
         function(jsonstr) {
-           $id('response_area').html(
+           $('#response_area').html(
                 JSON.parse(jsonstr).payload
            )
         },
@@ -33,10 +29,10 @@ $(function(){
 </head><body>
 <center><h1>Not What You Expected?</h1>
 <p>
-<i>Enter what processing you want (either 'env' or 'echo') and a
+<i>Enter the processing you want and a
 message.  Then click on 'Request'.  </i></p>
 <p>
-Do What? (env|echo):&nbsp;&npsp;
+Do What? (env|echo):&nbsp;&nbsp;
 <input type='text' id='what'/>
 </p><p>
 Message:&nbsp;&nbsp;
@@ -44,8 +40,8 @@ Message:&nbsp;&nbsp;
 </p><p style='width:800px;' >
 <button id='req'>Request</button>
 </p>
-<p id='response_area' style='width:600px;' >
-&nbsp;
+<p style='width:800px;' >
+<span id='response_area'>&nbsp;</span>
 </p></center>
 </body></html>
 
